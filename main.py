@@ -234,6 +234,8 @@ async def wait_for_pairing(rpc, pairing):
     print("\n[5/5] Waiting for pairing confirmation...")
 
     code = pairing["manualPairingCode"]
+    spinner = "|/-\\"
+    spinner_index = 0
 
     deadline = time.monotonic() + PAIRING_TIMEOUT
 
@@ -255,10 +257,16 @@ async def wait_for_pairing(rpc, pairing):
 
             return result
 
-        print("Waiting for pairing...")
+        print(
+            f"\rWaiting for pairing... {spinner[spinner_index % len(spinner)]}",
+            end="",
+            flush=True,
+        )
+        spinner_index += 1
 
         await asyncio.sleep(POLL_INTERVAL)
 
+    print()
     raise TimeoutError(
         "Pairing was not confirmed within "
         f"{PAIRING_TIMEOUT} seconds."
