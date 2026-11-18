@@ -3,8 +3,8 @@
 """
 Codex App Server Remote Control Setup
 
-既存のCodex App Serverに接続して、
-Remote Controlを有効化し、手動ペアリングを実施する。
+Connect to an existing Codex App Server, enable Remote Control,
+and complete manual pairing.
 
 Dependencies:
     pip install "websockets>=13"
@@ -70,7 +70,7 @@ class CodexRPC:
 
             response = json.loads(raw)
 
-            # 通知や別IDの応答は読み飛ばす
+            # Ignore notifications and responses with a different ID.
             if response.get("id") != request_id:
                 continue
 
@@ -224,8 +224,7 @@ async def start_pairing(rpc):
     print("=" * 54)
 
     print(
-        "\nChatGPTのRemote画面で"
-        "このペアリングコードを入力してください。"
+        "\nEnter this pairing code on the ChatGPT Remote screen."
     )
 
     return pairing
@@ -239,7 +238,7 @@ async def wait_for_pairing(rpc, pairing):
     deadline = time.monotonic() + PAIRING_TIMEOUT
 
     while time.monotonic() < deadline:
-        # pairingCode と manualPairingCode は排他的
+        # pairingCode and manualPairingCode are mutually exclusive.
         result = await rpc.request(
             "remoteControl/pairing/status",
             {
@@ -302,7 +301,7 @@ async def main():
 
     print("\nSetup completed.")
     print(
-        "既存のCodex App Serverはそのまま稼働します。"
+        "The existing Codex App Server will continue running."
     )
 
 
