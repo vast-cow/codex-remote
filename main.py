@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["websockets>=13"]
+# ///
 """
 Codex App Server Remote Control Setup
 
 Connect to an existing Codex App Server, enable Remote Control,
 and complete manual pairing.
 
-Dependencies:
-    pip install "websockets>=13"
-
 Usage:
-    python codex_remote_setup.py
+    uv run main.py
 
 Environment:
     CODEX_APP_SERVER_URL=ws://127.0.0.1:4500
