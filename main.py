@@ -15,26 +15,26 @@ Environment:
     CODEX_APP_SERVER_URL=ws://127.0.0.1:4500
     Use unix:///path/to/socket for a Unix WebSocket or unix:// for
     $CODEX_HOME/app-server-control/app-server-control.sock (default: ~/.codex).
+    When unset, try ws://127.0.0.1:4500, then the default Unix socket.
 """
 
 import asyncio
 import json
 import os
 import time
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
 from websockets.asyncio.client import connect, unix_connect
+from websockets.exceptions import InvalidHandshake
 
 
 # ============================================================
 # Configuration
 # ============================================================
 
-APP_SERVER_URL = os.getenv(
-    "CODEX_APP_SERVER_URL",
-    "ws://127.0.0.1:4500",
-)
+APP_SERVER_URL = os.getenv("CODEX_APP_SERVER_URL")
 
 CONNECT_TIMEOUT = 30
 PAIRING_TIMEOUT = 180
@@ -121,6 +121,26 @@ def connect_app_server(endpoint: str):
         return connect(endpoint, **options)
 
     raise ValueError(f"Unsupported App Server endpoint: {endpoint}")
+
+
+@asynccontextmanager
+async def open_app_server(endpoint):
+    endpoints = (
+        [endpoint] if endpoint is not None
+        else ["ws://127.0.0.1:4500", "unix://"]
+    )
+    async with AsyncExitStack() as stack:
+        for index, candidate in enumerate(endpoints):
+            print(f"App Server: {candidate}")
+            try:
+                ws = await stack.enter_async_context(connect_app_server(candidate))
+            except (OSError, asyncio.TimeoutError, InvalidHandshake) as exc:
+                if index == len(endpoints) - 1:
+                    raise
+                print(f"Connection failed: {exc}. Trying the default Unix socket...")
+            else:
+                break
+        yield ws
 
 
 def print_json(title, data):
@@ -309,9 +329,7 @@ async def main():
     print("Codex App Server Remote Control Setup")
     print("=" * 54)
 
-    print(f"App Server: {APP_SERVER_URL}")
-
-    async with connect_app_server(APP_SERVER_URL) as ws:
+    async with open_app_server(APP_SERVER_URL) as ws:
 
         rpc = CodexRPC(ws)
 
