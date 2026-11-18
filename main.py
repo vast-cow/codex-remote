@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Codex App Server Remote Control Setup
