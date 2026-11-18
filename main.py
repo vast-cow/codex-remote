@@ -13,6 +13,8 @@ Usage:
 
 Environment:
     CODEX_APP_SERVER_URL=ws://127.0.0.1:4500
+    Use unix:///path/to/socket for a Unix WebSocket or unix:// for
+    $CODEX_HOME/app-server-control/app-server-control.sock (default: ~/.codex).
 """
 
 import asyncio
@@ -20,15 +22,16 @@ import json
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 
-from websockets.asyncio.client import connect
+from websockets.asyncio.client import connect, unix_connect
 
 
 # ============================================================
 # Configuration
 # ============================================================
 
-WS_URL = os.getenv(
+APP_SERVER_URL = os.getenv(
     "CODEX_APP_SERVER_URL",
     "ws://127.0.0.1:4500",
 )
@@ -94,6 +97,31 @@ class CodexRPC:
 # ============================================================
 # Helpers
 # ============================================================
+
+def connect_app_server(endpoint: str):
+    options = {
+        "open_timeout": CONNECT_TIMEOUT,
+        "max_size": 16 * 1024 * 1024,
+    }
+
+    if endpoint.startswith("unix://"):
+        socket_path = endpoint[len("unix://"):]
+        if not socket_path:
+            codex_home = Path(
+                os.getenv("CODEX_HOME") or Path.home() / ".codex"
+            ).expanduser()
+            socket_path = str(
+                codex_home
+                / "app-server-control"
+                / "app-server-control.sock"
+            )
+        return unix_connect(path=socket_path, **options)
+
+    if endpoint.startswith(("ws://", "wss://")):
+        return connect(endpoint, **options)
+
+    raise ValueError(f"Unsupported App Server endpoint: {endpoint}")
+
 
 def print_json(title, data):
     print(f"\n=== {title} ===")
@@ -281,13 +309,9 @@ async def main():
     print("Codex App Server Remote Control Setup")
     print("=" * 54)
 
-    print(f"App Server: {WS_URL}")
+    print(f"App Server: {APP_SERVER_URL}")
 
-    async with connect(
-        WS_URL,
-        open_timeout=CONNECT_TIMEOUT,
-        max_size=16 * 1024 * 1024,
-    ) as ws:
+    async with connect_app_server(APP_SERVER_URL) as ws:
 
         rpc = CodexRPC(ws)
 
